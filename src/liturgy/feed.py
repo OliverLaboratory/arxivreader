@@ -55,40 +55,72 @@ def get_wav_duration_hms(file_path):
 def upload_episode(file_path):
     """Upload an episode to DigitalOcean Space."""
     file_name = os.path.basename(file_path)
-    client.upload_file(file_path, SPACE_NAME, file_name, ExtraArgs={"ContentType": "audio/mpeg"})
+    client.upload_file(file_path, SPACE_NAME, file_name, ExtraArgs={"ContentType": "audio/mpeg", "ACL": "public-read"})
     return f"{BUCKET_BASE_URL}/{file_name}"
+
+
+def convert_date(date_str):
+    # Parse the date in MM.DD.YYYY format
+    date_obj = datetime.strptime(date_str, "%m.%d.%Y")
+    # Format it into Mon, 01 Jan 2024 00:00:00 GMT
+    return date_obj.strftime("%a, %d %b %Y 00:00:00 GMT")
 
 
 def update_feed(title, description, episode_url, duration):
     """Update the podcast feed with a new episode."""
-    # Load or create the podcast feed
+
+    # Initialize the feed generator
     fg = FeedGenerator()
-    if os.path.exists(LOCAL_FEED_FILE):
-        fg.parse(LOCAL_FEED_FILE)
-    else:
-        # Initialize a new feed
-        fg.id(FEED_URL)
-        fg.title("Liturgy of the Hours")
-        fg.author({"name": "Carlos Oliver", "email": "c.gqq9t@passmail.net"})
-        fg.link(href=FEED_URL, rel="self")
-        fg.description("Liturgy of the Hours.")
-        fg.language("en")
-        fg.load_extension("podcast")
-        fg.podcast.itunes_author("Carlos Oliver")
-        fg.podcast.itunes_image(f"{BUCKET_BASE_URL}/podcast_logo.jpg")
+    fg.id(FEED_URL)
+    fg.title("Liturgy of the Hours")
+    fg.link(href=FEED_URL, rel="self")
+    fg.description("Daily reading from Liturgy of the Hours.")
+    fg.language("en")
 
-    # Add the new episode
-    episode = fg.add_entry()
-    episode.id(episode_url)
-    episode.title(title)
-    episode.description(description)
-    episode.enclosure(episode_url, 12345678, "audio/mpeg")
-    episode.podcast.itunes_duration(duration)
+    # Include the email in the author field
+    fg.itunes_author("Carlos Oliver <c.gqq9t@passmail.net>")  # Add your name and email
 
-    # Save the feed locally and upload it
+    # Optional: Add podcast image (Spotify supports square images)
+    fg.image("https://example.com/podcast_image.jpg", title="Podcast Image", link="https://example.com")
+
+    # Add episodes to the podcast
+    episodes = []
+    for episode in os.listdir("episodes"):
+        date, mode = episode.split(".")[0].split("_")
+        episodes.append(
+            {
+                "title": f"{date}: {mode}",
+                # 'link': f"{BUCKET_BASE_URL}/{episode}",
+                "description": f"{date}",
+                "pub_date": convert_date(date),
+                "audio_url": f"{BUCKET_BASE_URL}/{episode}",
+                "duration": get_mp3_duration(f"episodes/{episode}"),  # Duration in format hh:mm:ss
+                "explicit": "no",  # Mark as explicit or not
+            }
+        )
+
+    # Loop over each episode and add it to the feed
+    for episode in episodes:
+        fe = fg.add_entry()
+        fe.title(episode["title"])
+        # fe.link(href=episode['link'])
+        fe.description(episode["description"])
+        fe.pubDate(episode["pub_date"])
+        fe.enclosure(episode["audio_url"], 0, "audio/mpeg")  # Enclosure for audio file (MP3)
+        fe.itunes_duration(episode["duration"])  # Optional: Add iTunes duration tag
+        fe.itunes_explicit(episode["explicit"])  # Explicit content flag for Spotify
+
+    # Generate and save the podcast RSS feed to a file
+    fg.rss_file("my_podcast_feed_spotify.xml")
+
+    print("Podcast feed for Spotify generated: my_podcast_feed_spotify.xml")
+
     fg.rss_file(LOCAL_FEED_FILE)
     client.upload_file(
-        LOCAL_FEED_FILE, SPACE_NAME, os.path.basename(LOCAL_FEED_FILE), ExtraArgs={"ContentType": "application/rss+xml"}
+        LOCAL_FEED_FILE,
+        SPACE_NAME,
+        os.path.basename(LOCAL_FEED_FILE),
+        ExtraArgs={"ContentType": "application/rss+xml", "ACL": "public-read"},
     )
 
 
