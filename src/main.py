@@ -1,10 +1,23 @@
+from datetime import datetime
+
 from liturgy.get_liturgy import fetch_liturgy
 from liturgy.tts import get_audio, get_voices
+from liturgy.build_track import build_track
+
+
+def build_episode():
+    today = datetime.now()
+    date = today.strftime("%d.%m.%Y")
+
+    for mode in ["lauds", "vespers"]:
+        prayers = fetch_liturgy()
+        music = "music/anthony.mp3"
+        fg_paths = []
+        for i, prayer in enumerate(prayers):
+            audio_path = get_audio(" ".join(prayer))
+            fg_paths.append(audio_path)
+        build_track(fg_paths, music, f"episodes/{date}_{mode}.wav")
+
 
 if __name__ == "__main__":
-    prayers = fetch_liturgy()
-    for i, prayer in enumerate(prayers):
-        audio = get_audio(" ".join(prayer))
-        with open(f"prayer_{i}.mp3", "wb") as file:
-            file.write(audio)
-    pass
+    build_episode()
