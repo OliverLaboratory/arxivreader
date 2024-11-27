@@ -68,7 +68,7 @@ def save_mp3(audio_segment, output_path):
     """
     Save an AudioSegment as an MP3 file.
     """
-    audio_segment.export(output_path, format="wav")
+    audio_segment.export(output_path, format="mp3")
 
 
 def build_track(fg_files, bkg_file, output_path):
