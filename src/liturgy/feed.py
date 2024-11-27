@@ -1,9 +1,11 @@
 import boto3
+from pathlib import Path
 from feedgen.feed import FeedGenerator
 import os
 from pydub.utils import mediainfo
 import wave
 from datetime import timedelta
+from datetime import datetime
 
 # DigitalOcean Spaces credentials
 SPACE_NAME = "liturgy"
@@ -61,16 +63,17 @@ def upload_episode(file_path):
 
 def convert_date(date_str):
     # Parse the date in MM.DD.YYYY format
-    date_obj = datetime.strptime(date_str, "%m.%d.%Y")
+    date_obj = datetime.strptime(date_str, "%d.%m.%Y")
     # Format it into Mon, 01 Jan 2024 00:00:00 GMT
     return date_obj.strftime("%a, %d %b %Y 00:00:00 GMT")
 
 
-def update_feed(title, description, episode_url, duration):
+def update_feed():
     """Update the podcast feed with a new episode."""
 
     # Initialize the feed generator
     fg = FeedGenerator()
+    fg.load_extension("podcast")
     fg.id(FEED_URL)
     fg.title("Liturgy of the Hours")
     fg.link(href=FEED_URL, rel="self")
@@ -78,15 +81,24 @@ def update_feed(title, description, episode_url, duration):
     fg.language("en")
 
     # Include the email in the author field
-    fg.itunes_author("Carlos Oliver <c.gqq9t@passmail.net>")  # Add your name and email
+    fg.author({"name": "Carlos Oliver", "email": "c.gqq9t@passmail.net"})  # Add your name and email
+    fg.podcast.itunes_category("Religion")
+    fg.podcast.itunes_explicit("no")
+    fg.podcast.itunes_owner("Carlos Oliver", "c.gqq9t@passmail.net")
+    fg.podcast.itunes_author("Carlos Oliver")
 
     # Optional: Add podcast image (Spotify supports square images)
-    fg.image("https://example.com/podcast_image.jpg", title="Podcast Image", link="https://example.com")
+    fg.image(
+        f"https://liturgy.nyc3.digitaloceanspaces.com/liturgy/cover.png",
+        title="Podcast Image",
+        link="https://liturgy.nyc3.digitaloceanspaces.com/liturgy/cover.png",
+    )
 
     # Add episodes to the podcast
     episodes = []
     for episode in os.listdir("episodes"):
-        date, mode = episode.split(".")[0].split("_")
+        print(episode)
+        date, mode = Path(episode).stem.split("_")
         episodes.append(
             {
                 "title": f"{date}: {mode}",
@@ -103,17 +115,19 @@ def update_feed(title, description, episode_url, duration):
     for episode in episodes:
         fe = fg.add_entry()
         fe.title(episode["title"])
+        fe.author(name="Carlos Oliver", email="c.gqq9t@passmail.net")
         # fe.link(href=episode['link'])
         fe.description(episode["description"])
         fe.pubDate(episode["pub_date"])
         fe.enclosure(episode["audio_url"], 0, "audio/mpeg")  # Enclosure for audio file (MP3)
-        fe.itunes_duration(episode["duration"])  # Optional: Add iTunes duration tag
-        fe.itunes_explicit(episode["explicit"])  # Explicit content flag for Spotify
+        fe.guid(episode["description"], permalink=False)
+        # fe.itunes_duration(episode["duration"])  # Optional: Add iTunes duration tag
+        # fe.itunes_explicit(episode["explicit"])  # Explicit content flag for Spotify
 
     # Generate and save the podcast RSS feed to a file
-    fg.rss_file("my_podcast_feed_spotify.xml")
+    fg.rss_file("liturgy.xml")
 
-    print("Podcast feed for Spotify generated: my_podcast_feed_spotify.xml")
+    print("Podcast feed for Spotify generated: liturgy.xml")
 
     fg.rss_file(LOCAL_FEED_FILE)
     client.upload_file(
@@ -126,17 +140,8 @@ def update_feed(title, description, episode_url, duration):
 
 def main():
     # Upload new episode
-    episode_path = "episodes/26.11.2024_vespers.mp3"
-    episode_url = upload_episode(episode_path)
-    print(f"Uploaded episode to {episode_url}")
-
     # Update feed
-    update_feed(
-        title="26.11.24: Vespers",
-        description="Vespers.",
-        episode_url=episode_url,
-        duration=get_wav_duration_hms(episode_path),
-    )
+    update_feed()
     print("Podcast feed updated!")
 
 
