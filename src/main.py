@@ -16,7 +16,7 @@ def build_episode():
         for i, prayer in enumerate(prayers):
             audio_path = get_audio(" ".join(prayer))
             fg_paths.append(audio_path)
-        build_track(fg_paths, music, f"episodes/{date}_{mode}.wav")
+        build_track(fg_paths, music, f"episodes/{date}_{mode}.mp3")
 
 
 if __name__ == "__main__":
