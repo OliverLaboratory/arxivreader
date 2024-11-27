@@ -1,6 +1,7 @@
 import boto3
 from feedgen.feed import FeedGenerator
 import os
+from pydub.utils import mediainfo
 import wave
 from datetime import timedelta
 
@@ -27,6 +28,21 @@ client = session.client(
 )
 
 
+def get_mp3_duration(file_path):
+    # Get media info
+    info = mediainfo(file_path)
+
+    # Duration in seconds
+    duration_seconds = float(info["duration"])
+
+    # Convert to hh:mm:ss format
+    hours = int(duration_seconds // 3600)
+    minutes = int((duration_seconds % 3600) // 60)
+    seconds = int(duration_seconds % 60)
+
+    return f"{hours:02}:{minutes:02}:{seconds:02}"
+
+
 def get_wav_duration_hms(file_path):
     with wave.open(file_path, "r") as wav_file:
         frames = wav_file.getnframes()
@@ -39,7 +55,7 @@ def get_wav_duration_hms(file_path):
 def upload_episode(file_path):
     """Upload an episode to DigitalOcean Space."""
     file_name = os.path.basename(file_path)
-    client.upload_file(file_path, SPACE_NAME, file_name, ExtraArgs={"ContentType": "audio/wav"})
+    client.upload_file(file_path, SPACE_NAME, file_name, ExtraArgs={"ContentType": "audio/mpeg"})
     return f"{BUCKET_BASE_URL}/{file_name}"
 
 
@@ -78,7 +94,7 @@ def update_feed(title, description, episode_url, duration):
 
 def main():
     # Upload new episode
-    episode_path = "episodes/26.11.2024_vespers.wav"
+    episode_path = "episodes/26.11.2024_vespers.mp3"
     episode_url = upload_episode(episode_path)
     print(f"Uploaded episode to {episode_url}")
 
