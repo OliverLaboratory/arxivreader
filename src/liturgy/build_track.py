@@ -109,7 +109,7 @@ def add_background_music(main_audio, background_audio_path, foreground_volume=0,
     # print(f"adding reverb")
     # main_audio = add_reverb(main_audio)
     print(f"adding distort")
-    main_audio = add_distortion(main_audio)
+    main_audio = add_distortion(main_audio, gain=1.4)
     # Trim background to match the exact length of the main audio
     background = background[: len(main_audio)]
 
