@@ -98,6 +98,7 @@ def update_feed():
     episodes = []
     for episode in os.listdir("episodes"):
         print(episode)
+        upload_episode(episode)
         date, mode = Path(episode).stem.split("_")
         episodes.append(
             {
