@@ -1,4 +1,52 @@
 from pydub import AudioSegment
+from pydub.effects import normalize
+import numpy as np
+import tempfile
+from scipy.signal import convolve
+
+
+# Function to apply distortion
+def add_distortion(audio, gain=20):
+    """
+    Apply distortion to the audio by amplifying and clipping the waveform.
+    """
+    samples = np.array(audio.get_array_of_samples())
+    max_val = np.iinfo(samples.dtype).max
+    min_val = np.iinfo(samples.dtype).min
+
+    # Amplify samples
+    samples = samples * gain
+
+    # Clip samples to avoid overflow
+    samples = np.clip(samples, min_val, max_val)
+
+    # Create a new AudioSegment with distorted samples
+    distorted_audio = audio._spawn(samples.tobytes())
+    return distorted_audio
+
+
+# Function to apply reverb
+def add_reverb(audio, decay=0.5):
+    """
+    Apply reverb to the audio using convolution.
+    """
+    # Create a simple impulse response for reverb
+    sample_rate = audio.frame_rate
+    impulse = np.zeros(int(sample_rate * decay))
+    impulse[0] = 1
+    for i in range(1, len(impulse)):
+        impulse[i] = impulse[i - 1] * decay
+
+    # Convolve the audio samples with the impulse response
+    samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
+    reverb_samples = convolve(samples, impulse, mode="full")[: len(samples)]
+
+    # Normalize the result and cast to the original type
+    reverb_samples = np.clip(reverb_samples, -32768, 32767).astype(samples.dtype)
+
+    # Create a new AudioSegment with the reverb-applied samples
+    reverb_audio = audio._spawn(reverb_samples.tobytes())
+    return reverb_audio
 
 
 def slow_down_audio(audio_segment, speed_factor):
@@ -57,6 +105,9 @@ def add_background_music(main_audio, background_audio_path, foreground_volume=0,
         loop_count = len(main_audio) // len(background) + 1
         background = background * loop_count
 
+    # effects
+    main_audio = add_reverb(main_audio)
+    main_audio = add_distortion(main_audio)
     # Trim background to match the exact length of the main audio
     background = background[: len(main_audio)]
 
