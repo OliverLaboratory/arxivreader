@@ -1,3 +1,4 @@
+import os
 from pydub import AudioSegment
 from pydub.effects import normalize
 import numpy as np
@@ -64,6 +65,17 @@ def slow_down_audio(audio_segment, speed_factor):
     return slowed_audio
 
 
+def stitch_audio_segments_with_silence(segments, silence_duration=3000):
+    combined = AudioSegment.empty()
+    silence = AudioSegment.silent(duration=3000)  # 3000 ms = 3 seconds of silence
+    for i, audio in enumerate(segments):
+        combined += audio
+        # Add silence between tracks except after the last track
+        if i < len(segments) - 1:
+            combined += silence
+    return combined
+
+
 def stitch_mp3_files_with_silence(mp3_files, silence_duration=3000):
     """
     Combine multiple MP3 files into one, with silence between them.
@@ -124,29 +136,36 @@ def save_mp3(audio_segment, output_path):
     audio_segment.export(output_path, format="mp3")
 
 
-def build_track(fg_files, bkg_file, output_path):
-    # List of MP3 files to stitch together
-    mp3_files = fg_files  # Replace with your file paths
+def build_track(fg_files, bkg_file, output_path, overwrite=False):
+    if not os.path.exists(output_path) or overwrite:
+        # List of MP3 files to stitch together
+        mp3_files = fg_files  # Replace with your file paths
 
-    # Path to the background music MP3 file
-    background_music_path = bkg_file
+        # Path to the background music MP3 file
+        background_music_path = bkg_file
 
-    # Silence duration between tracks (in milliseconds)
-    silence_duration = 3000  # 3 seconds
+        # Silence duration between tracks (in milliseconds)
+        silence_duration = 3000  # 3 seconds
 
-    # Volume adjustments (in dB)
-    foreground_volume = -10  # Adjust the main audio volume (0 = no change)
-    background_volume = -15  # Adjust the background music volume (negative reduces volume)
+        # Volume adjustments (in dB)
+        foreground_volume = 0  # Adjust the main audio volume (0 = no change)
+        background_volume = -25  # Adjust the background music volume (negative reduces volume)
 
-    # Stitch the MP3 files with silence
-    print("Stitching MP3 files with silence...")
-    combined_audio = stitch_mp3_files_with_silence(mp3_files, silence_duration)
+        # Stitch the MP3 files with silence
+        print("Stitching MP3 files with silence...")
+        prayers = []
+        for prayer in fg_files:
+            combined_audio = stitch_mp3_files_with_silence(prayer, 0)
+            prayers.append(combined_audio)
 
-    # Add background music
-    print("Adding background music...")
-    final_audio = add_background_music(combined_audio, background_music_path, foreground_volume, background_volume)
+        final_audio = stitch_audio_segments_with_silence(prayers)
+        # Add background music
+        print("Adding background music...")
+        final_audio = add_background_music(final_audio, background_music_path, foreground_volume, background_volume)
 
-    # Save the final audio
-    print(f"Saving output to {output_path}...")
-    save_mp3(final_audio, output_path)
-    print("Done!")
+        # Save the final audio
+        print(f"Saving output to {output_path}...")
+        save_mp3(final_audio, output_path)
+        print("Done!")
+    else:
+        print(f"{output_path} already exists. Skipping.")
