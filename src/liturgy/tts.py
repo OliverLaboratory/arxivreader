@@ -27,8 +27,9 @@ if not os.path.isfile(local_file):
 
 model = torch.package.PackageImporter(local_file).load_pickle("tts_models", "model")
 model.to(device)
-good_speakers = [4, 7, 10, 13, 17, 20, 22]
+good_speakers = [4, 10]
 speaker = f"en_{random.choice(good_speakers)}"
+print(f"SPEAKER: {speaker}")
 
 
 sample_rate = 44100  # Hz
@@ -62,10 +63,10 @@ def numpy_to_mp3(array, sample_rate, output_file):
     print(f"Saved to {output_file}")
 
 
-def get_audio(text, engine="silero", recompute=False):
+def get_audio(text, engine="silero", recompute=False, save_dir="prayers"):
     hash_object = hashlib.md5(text.encode())  # MD5 hash
     hash_hex = hash_object.hexdigest()
-    audio_path = f"{AUDIO_DB}/{hash_hex}.mp3"
+    audio_path = Path(save_dir) / f"{hash_hex}.mp3"
     print(f"computing: {text} ")
     if not os.path.exists(audio_path) or recompute:
         if engine == "bark":

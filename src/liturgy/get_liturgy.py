@@ -47,6 +47,7 @@ def fetch_liturgy(hour="lauds"):
             text = section.text.strip()
             if text == "INTRODUCTION":
                 in_text = True
+                continue
             if text == "Today":
                 prayers.append(current_prayer)
                 break
