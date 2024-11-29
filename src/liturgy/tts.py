@@ -27,7 +27,7 @@ if not os.path.isfile(local_file):
 
 model = torch.package.PackageImporter(local_file).load_pickle("tts_models", "model")
 model.to(device)
-good_speakers = [4, 10]
+good_speakers = [4, 7]
 speaker = f"en_{random.choice(good_speakers)}"
 print(f"SPEAKER: {speaker}")
 

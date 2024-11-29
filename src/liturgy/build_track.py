@@ -45,8 +45,8 @@ def add_effects(audio):
     # Step 3: Define Pedalboard effects
     board = Pedalboard(
         [
-            Resample(target_sample_rate=int(audio.frame_rate * 0.70)),
-            Distortion(drive_db=10),  # Add a gritty, lo-fi distortion
+            Resample(target_sample_rate=int(audio.frame_rate * 0.65)),
+            Distortion(drive_db=6),  # Add a gritty, lo-fi distortion
             HighpassFilter(cutoff_frequency_hz=150),  # Remove low frequencies
             LowpassFilter(cutoff_frequency_hz=4000),  # Remove high frequencies
             Reverb(room_size=0.3, damping=0.5, wet_level=0.2),  # Add ethereal reverb
@@ -81,6 +81,7 @@ def stitch_mp3_files_with_silence(mp3_files, silence_duration=3000):
     """
     combined = AudioSegment.empty()
     silence = AudioSegment.silent(duration=3000)  # 3000 ms = 3 seconds of silence
+    combined += silence
     for i, mp3_file in enumerate(mp3_files):
         audio = AudioSegment.from_mp3(mp3_file)
         audio = slow_down_audio(audio, 0.75)
@@ -143,8 +144,8 @@ def build_track(fg_files, bkg_file, output_path, overwrite=False):
         silence_duration = 3000  # 3 seconds
 
         # Volume adjustments (in dB)
-        foreground_volume = 0  # Adjust the main audio volume (0 = no change)
-        background_volume = -25  # Adjust the background music volume (negative reduces volume)
+        foreground_volume = -10  # Adjust the main audio volume (0 = no change)
+        background_volume = -10  # Adjust the background music volume (negative reduces volume)
 
         # Stitch the MP3 files with silence
         print("Stitching MP3 files with silence...")

@@ -15,9 +15,9 @@ ACCESS_KEY = open("SPACES_ACCESS.txt").readline().strip()
 SECRET_KEY = open("SPACES_SECRET.txt").readline().strip()
 
 # Podcast details
-FEED_URL = "https://{SPACE_NAME}.{REGION}.digitaloceanspaces.com/liturgy.xml"
+FEED_URL = f"https://{SPACE_NAME}.{REGION}.digitaloceanspaces.com/liturgy/liturgy.xml"
 LOCAL_FEED_FILE = "liturgy.xml"
-BUCKET_BASE_URL = f"https://{SPACE_NAME}.{REGION}.digitaloceanspaces.com"
+BUCKET_BASE_URL = f"https://{SPACE_NAME}.{REGION}.digitaloceanspaces.com/liturgy"
 
 # Initialize Spaces client
 session = boto3.session.Session()
@@ -82,10 +82,11 @@ def update_feed():
 
     # Include the email in the author field
     fg.author({"name": "Carlos Oliver", "email": "c.gqq9t@passmail.net"})  # Add your name and email
-    fg.podcast.itunes_category("Religion")
+    fg.podcast.itunes_category("Religion & Spirituality", "Religion")
     fg.podcast.itunes_explicit("no")
     fg.podcast.itunes_owner("Carlos Oliver", "c.gqq9t@passmail.net")
     fg.podcast.itunes_author("Carlos Oliver")
+    fg.podcast.itunes_image("https://liturgy.nyc3.digitaloceanspaces.com/liturgy/cover.png")
 
     # Optional: Add podcast image (Spotify supports square images)
     fg.image(
@@ -99,16 +100,22 @@ def update_feed():
     for episode in os.listdir("episodes"):
         print(episode)
         upload_episode(os.path.join("episodes", episode))
-        date, mode = Path(episode).stem.split("_")
+        ep_str = Path(episode).stem
+        date = ep_str[:8]
+        mode = ep_str[8:]
+        dd = date[0] + date[1]
+        mm = date[2] + date[3]
+        yyyy = date[4] + date[5] + date[6] + date[7]
         episodes.append(
             {
-                "title": f"{date}: {mode}",
+                "title": f"{dd}.{mm}.{yyyy}: {mode}",
                 # 'link': f"{BUCKET_BASE_URL}/{episode}",
-                "description": f"{date}",
-                "pub_date": convert_date(date),
+                "description": f"{dd}.{mm}.{yyyy}: {mode}",
+                "pub_date": convert_date(f"{dd}.{mm}.{yyyy}"),
                 "audio_url": f"{BUCKET_BASE_URL}/{episode}",
                 "duration": get_mp3_duration(f"episodes/{episode}"),  # Duration in format hh:mm:ss
                 "explicit": "no",  # Mark as explicit or not
+                "path": f"episodes/{episode}",
             }
         )
 
@@ -120,10 +127,12 @@ def update_feed():
         # fe.link(href=episode['link'])
         fe.description(episode["description"])
         fe.pubDate(episode["pub_date"])
-        fe.enclosure(episode["audio_url"], 0, "audio/mpeg")  # Enclosure for audio file (MP3)
+        fe.enclosure(
+            episode["audio_url"], os.path.getsize(episode["path"]), "audio/mpeg"
+        )  # Enclosure for audio file (MP3)
         fe.guid(episode["description"], permalink=False)
         # fe.itunes_duration(episode["duration"])  # Optional: Add iTunes duration tag
-        # fe.itunes_explicit(episode["explicit"])  # Explicit content flag for Spotify
+        fe.podcast.itunes_explicit(episode["explicit"])  # Explicit content flag for Spotify
 
     # Generate and save the podcast RSS feed to a file
     fg.rss_file("liturgy.xml")

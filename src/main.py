@@ -32,7 +32,8 @@ def build_episode():
                     audio_path = get_audio(" ".join(prayer[i : i + chunk_size]), recompute=True, save_dir=tmpdir)
                     prayer_paths.append(audio_path)
                 fg_paths.append(prayer_paths)
-            build_track(fg_paths, music, f"episodes/{date}_{mode}.mp3", overwrite=True)
+            date_clean = date.replace(".", "")
+            build_track(fg_paths, music, f"episodes/{date_clean}{mode}.mp3", overwrite=True)
 
 
 if __name__ == "__main__":
