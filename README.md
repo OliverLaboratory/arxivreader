@@ -51,4 +51,4 @@ chmod u+x release.sh
 
 ---
 
-Support development and hosting costs with [donation](https://ko-fi.com/liturgy)
+Support development and hosting costs with [donation](https://ko-fi.com/liturgy).
