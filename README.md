@@ -19,6 +19,11 @@ You can use this to generate your own podcast by tweaking a few variables to mak
 pip install -r requirements.txt
 ```
 
+## Set-up
+
+* Background music chosen from mp3 files in `music/`
+* `mkdir episodes` to store generated episodes
+
 ## Release Today's Prayers
 
 ```
