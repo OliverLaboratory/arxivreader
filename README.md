@@ -3,7 +3,7 @@
 Source code for [Liturgy of the Hours podcast](https://open.spotify.com/show/1LHNP0yiopuiHFRjAguaXg?si=9075cdf6007642cd).
 
 <div align="center">
-<img src="images/cover.png" width="300">
+<a href="https://open.spotify.com/show/1LHNP0yiopuiHFRjAguaXg?si=9075cdf6007642cd"><img src="images/cover.png" width="300"></a>
 </div>
 
 
@@ -24,12 +24,25 @@ You can use this to generate your own podcast by tweaking a few variables to mak
 pip install -r requirements.txt
 ```
 
-## Set-up
+## Build Today's Episode
 
-* Background music chosen from mp3 files in `music/`
-* `mkdir episodes` to store generated episodes
+```
+python src/build_episode.py
+```
 
-## Release Today's Prayers
+Will create an entry in `episodes/` with the episode mp3.
+
+
+## Update XML feed
+
+
+```
+python src/liturgy/feed.py
+```
+
+Creates XML file with all episodes in `episodes/`
+
+## Automated releases
 
 ```
 chmod u+x release.sh
