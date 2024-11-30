@@ -1,4 +1,4 @@
-# Automated Daily Prayer Podcast
+# Automated Daily Prayer Reading Podcast
 
 Source code for [Liturgy of the Hours podcast](https://open.spotify.com/show/1LHNP0yiopuiHFRjAguaXg?si=9075cdf6007642cd).
 
