@@ -3,9 +3,11 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 
 
-def fetch_liturgy(hour="lauds"):
+def fetch_liturgy(hour="lauds", query_date="today"):
+    if query_date == "today":
+        query_date = datetime.now().strftime("%Y%m%d")
     # Universalis URL for today's Liturgy of the Hours
-    url = f"https://universalis.com/{hour}.htm"
+    url = f"https://universalis.com/{query_date}/{hour}.htm"
 
     try:
         # Fetch the webpage
@@ -53,7 +55,7 @@ def fetch_liturgy(hour="lauds"):
                 break
 
             if in_text:
-                if len(text) > 0:
+                if len(text) > 0 and html_class != "podcastentry":
                     current_prayer.append(text)
 
     except AttributeError as e:
