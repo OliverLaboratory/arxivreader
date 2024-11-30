@@ -48,3 +48,7 @@ Creates XML file with all episodes in `episodes/`
 chmod u+x release.sh
 ./release.sh
 ```
+
+---
+
+Support development and hosting costs with [donation](https://ko-fi.com/liturgy).
