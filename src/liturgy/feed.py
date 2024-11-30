@@ -82,6 +82,8 @@ def update_feed():
     )
     fg.language("en")
 
+    msg = "Donations to support development and hosting: https://ko-fi.com/liturgy. \n Source code: https://github.com/cgoliver/liturgy_tts"
+
     # Include the email in the author field
     fg.author({"name": "Carlos Oliver", "email": "c.gqq9t@passmail.net"})  # Add your name and email
     fg.podcast.itunes_category("Religion & Spirituality", "Religion")
@@ -108,11 +110,15 @@ def update_feed():
         dd = date[0] + date[1]
         mm = date[2] + date[3]
         yyyy = date[4] + date[5] + date[6] + date[7]
+        try:
+            prayer_text = "".join(open(f"texts/{dd}{mm}{yyyy}{mode}.txt", "r").readlines())
+        except FileNotFoundError:
+            prayer_text = ""
         episodes.append(
             {
                 "title": f"{dd}.{mm}.{yyyy}: {mode[0].upper()}{mode[1:]}",
                 # 'link': f"{BUCKET_BASE_URL}/{episode}",
-                "description": f"{dd}.{mm}.{yyyy}: {mode}",
+                "description": f"{dd}.{mm}.{yyyy}: {mode} \n\n {prayer_text} \n\n {msg}",
                 "pub_date": convert_date(f"{dd}.{mm}.{yyyy}"),
                 "audio_url": f"{BUCKET_BASE_URL}/{episode}",
                 "duration": get_mp3_duration(f"episodes/{episode}"),  # Duration in format hh:mm:ss

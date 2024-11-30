@@ -1,6 +1,7 @@
 import os
 import re
 from datetime import datetime
+from pathlib import Path
 import tempfile
 
 from liturgy.get_liturgy import fetch_liturgy
@@ -20,10 +21,13 @@ def build_episode():
     today = datetime.now()
     date = today.strftime("%d.%m.%Y")
 
+    Path("texts").mkdir(parents=True, exist_ok=True)
+
     for mode in ["lauds", "vespers"]:
         prayers = fetch_liturgy(hour=mode)
         songs = list(os.listdir("music"))
         music = f"music/{songs[hash(date) % len(songs)]}"
+        all_text = ""
         fg_paths = []
         with tempfile.TemporaryDirectory() as tmpdir:
             for i, prayer in enumerate(prayers):
@@ -31,11 +35,16 @@ def build_episode():
                 prayer = split_prayer(prayer)
                 for i in range(0, len(prayer), chunk_size):
                     text = " ".join(prayer[i : i + chunk_size])
+                    all_text += text + "\n"
                     audio_path = get_audio(text, recompute=True, save_dir=tmpdir)
                     prayer_paths.append(audio_path)
+                all_text += "\n" + "_" * 12 + "\n\n"
                 fg_paths.append(prayer_paths)
             date_clean = date.replace(".", "")
             build_track(fg_paths, music, f"episodes/{date_clean}{mode}.mp3", overwrite=True)
+
+        with open(f"texts/{date_clean}{mode}.txt", "w") as txt:
+            txt.write(all_text)
 
 
 if __name__ == "__main__":
