@@ -2,7 +2,8 @@
 
 Source code for [Liturgy of the Hours podcast](https://open.spotify.com/show/1LHNP0yiopuiHFRjAguaXg?si=9075cdf6007642cd).
 
-![](images/cover.png)
+<img src="images/cover.png" width="300">
+
 
 This repository automates a full podcast from episode generation to release: 
 
