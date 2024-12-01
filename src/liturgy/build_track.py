@@ -144,8 +144,8 @@ def build_track(fg_files, bkg_file, output_path, overwrite=False):
         silence_duration = 3000  # 3 seconds
 
         # Volume adjustments (in dB)
-        foreground_volume = 0  # Adjust the main audio volume (0 = no change)
-        background_volume = -15  # Adjust the background music volume (negative reduces volume)
+        foreground_volume = -3  # Adjust the main audio volume (0 = no change)
+        background_volume = -10  # Adjust the background music volume (negative reduces volume)
 
         # Stitch the MP3 files with silence
         print("Stitching MP3 files with silence...")
