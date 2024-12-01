@@ -15,6 +15,7 @@ chunk_size = 2
 def cline():
     parser = argparse.ArgumentParser()
     parser.add_argument("--date", help="Date in dd.mm.yyyy format, or 'today'", default="today")
+    parser.add_argument("--debug", help="Compile short snippet", default=False, action="store_true")
     return parser.parse_args()
 
 
@@ -28,8 +29,25 @@ def build_episode(args):
 
     Path("texts").mkdir(parents=True, exist_ok=True)
 
-    for mode in ["lauds", "vespers"]:
-        prayers = fetch_liturgy(query_date=args.date, hour=mode)
+    modes = ["lauds", "vespers"] if not args.debug else ["lauds"]
+
+    for mode in modes:
+        if args.debug:
+            prayers = [
+                [
+                    "Our Father who art in heaven.",
+                    "Hallowed be thy name.",
+                    "Thy kingdom come, thy will be done.",
+                    "On earth as it is in heaven.",
+                    "On earth as it is in heaven.",
+                    "Give us this day our daily bread.",
+                    "And forgive us our trespasses, as we forgive those who trespass against us."
+                    "And lead us not into temptation; but deliver us from evil.",
+                    "Amen.",
+                ]
+            ]
+        else:
+            prayers = fetch_liturgy(query_date=args.date, hour=mode)
         songs = list(os.listdir("music"))
         music = f"music/{songs[hash(args.date) % len(songs)]}"
         all_text = ""
@@ -46,7 +64,10 @@ def build_episode(args):
                 all_text += "\n" + "_" * 12 + "\n\n"
                 fg_paths.append(prayer_paths)
             date_clean = args.date.replace(".", "")
-            build_track(fg_paths, music, f"episodes/{date_clean}{mode}.mp3", overwrite=True)
+            if args.debug:
+                build_track(fg_paths, music, f"debug.mp3", overwrite=True)
+            else:
+                build_track(fg_paths, music, f"episodes/{date_clean}{mode}.mp3", overwrite=True)
 
         with open(f"texts/{date_clean}{mode}.txt", "w") as txt:
             txt.write(all_text)

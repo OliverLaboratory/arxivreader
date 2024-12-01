@@ -106,6 +106,7 @@ def add_background_music(main_audio, background_audio_path, foreground_volume=0,
 
     # Adjust volumes
     main_audio = main_audio + foreground_volume
+    main_audio += AudioSegment.silent(duration=5000)
     background = background + background_volume
 
     # Loop background music to match the length of the main audio
@@ -120,6 +121,9 @@ def add_background_music(main_audio, background_audio_path, foreground_volume=0,
     # main_audio = add_distortion(main_audio, gain=1.4)
     # Trim background to match the exact length of the main audio
     background = background[: len(main_audio)]
+
+    fade_duration = 5000  # 5 seconds (in milliseconds)
+    background = background.fade_out(fade_duration)
 
     # Overlay background music on the main audio
     return main_audio.overlay(background)
