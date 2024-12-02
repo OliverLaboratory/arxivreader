@@ -3,14 +3,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 
 
-def fetch_liturgy(hour="lauds", query_date="today"):
-    if query_date == "today":
-        query_date = datetime.now().strftime("%Y%m%d")
-    else:
-        day = query_date[:2]
-        month = query_date[2:4]
-        year = query_date[4:]
-        query_date = year + month + day
+def fetch_liturgy(query_date, hour="lauds"):
     # Universalis URL for today's Liturgy of the Hours
     url = f"https://universalis.com/{query_date}/{hour}.htm"
 

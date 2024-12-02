@@ -27,6 +27,18 @@ def split_prayer(prayer):
 
 def build_episode(args):
 
+    if args.date == "today":
+        query_date = datetime.now().strftime("%Y%m%d")
+        # Extract day, month, year
+        year = query_date[:4]  # First 4 characters
+        month = query_date[4:6]  # Characters 5 and 6
+        day = query_date[6:]  # Characters 7 and 8
+    else:
+        day = args.date[:2]
+        month = args.date[2:4]
+        year = args.date[4:]
+        query_date = year + month + day
+
     Path("texts").mkdir(parents=True, exist_ok=True)
 
     modes = ["lauds", "vespers"] if not args.debug else ["lauds"]
@@ -47,7 +59,7 @@ def build_episode(args):
                 ]
             ]
         else:
-            prayers = fetch_liturgy(query_date=args.date, hour=mode)
+            prayers = fetch_liturgy(query_date=query_date, hour=mode)
         songs = list(os.listdir("music"))
         music = f"music/{songs[hash(args.date) % len(songs)]}"
         all_text = ""
@@ -63,7 +75,7 @@ def build_episode(args):
                     prayer_paths.append(audio_path)
                 all_text += "\n" + "_" * 12 + "\n\n"
                 fg_paths.append(prayer_paths)
-            date_clean = args.date.replace(".", "")
+            date_clean = dd + mm + yyyy
             if args.debug:
                 build_track(fg_paths, music, f"debug.mp3", overwrite=True)
             else:

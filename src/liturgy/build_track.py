@@ -84,7 +84,7 @@ def stitch_mp3_files_with_silence(mp3_files, silence_duration=3000):
     combined += silence
     for i, mp3_file in enumerate(mp3_files):
         audio = AudioSegment.from_mp3(mp3_file)
-        audio = slow_down_audio(audio, 0.75)
+        audio = slow_down_audio(audio, 0.70)
         combined += audio
         # Add silence between tracks except after the last track
         if i < len(mp3_files) - 1:
