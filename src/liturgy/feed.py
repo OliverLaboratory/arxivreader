@@ -118,7 +118,7 @@ def update_feed():
             {
                 "title": f"{dd}.{mm}.{yyyy}: {mode[0].upper()}{mode[1:]}",
                 # 'link': f"{BUCKET_BASE_URL}/{episode}",
-                "description": f"{dd}.{mm}.{yyyy}: {mode} \n\n {prayer_text} \n\n {msg}",
+                "description": f"{prayer_text} \n\n {msg}",
                 "pub_date": convert_date(f"{dd}.{mm}.{yyyy}"),
                 "audio_url": f"{BUCKET_BASE_URL}/{episode}",
                 "duration": get_mp3_duration(f"episodes/{episode}"),  # Duration in format hh:mm:ss
