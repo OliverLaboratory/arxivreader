@@ -75,7 +75,7 @@ def build_episode(args):
                     prayer_paths.append(audio_path)
                 all_text += "\n" + "_" * 12 + "\n\n"
                 fg_paths.append(prayer_paths)
-            date_clean = dd + mm + yyyy
+            date_clean = day + month + year
             if args.debug:
                 build_track(fg_paths, music, f"debug.mp3", overwrite=True)
             else:
