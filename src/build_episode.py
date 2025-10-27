@@ -45,13 +45,20 @@ def get_summaries(date, topic="q-bio.BM", summaries_subdir="summaries"):
     keywords = ["protein", 
                 "dna", 
                 "rna", 
-                "cryo-EM"]
+                "cryo-EM",
+                "Protein-Nucleic",
+                "Protein-Small",
+                "RNA-small",
+                "Molecule",
+                "Molecular",
+                "atomic"]
     get_papers(date=date, 
                cats=lists,
                keywords=keywords,
                out=str(outdir)
                )
 
+    sys.exit()
     print("Summarizing ...")
     # Choose/create summaries directory: prefer <outdir>/summaries; fall back to ./summaries if it already exists.
     summaries_dir = outdir / summaries_subdir
@@ -65,15 +72,14 @@ def get_summaries(date, topic="q-bio.BM", summaries_subdir="summaries"):
         print(f"No PDFs found in {outdir}", file=sys.stderr)
         return []
 
-    results = []
+    summary_audio_paths = []
     for p in pdf_paths:
-        summary_file = summaries_dir / (p.stem + ".txt")
-        print(summary_file)
+        summary_file = summaries_dir / (p.stem + ".mp3")
 
         # If we already summarized this PDF, reuse it.
         if summary_file.exists():
             try:
-                results.append(summary_file.read_text(encoding="utf-8"))
+                summary_audio_paths.append(summary_file)
                 print("Loading existing summary.")
                 continue
             except Exception as e:
@@ -82,17 +88,12 @@ def get_summaries(date, topic="q-bio.BM", summaries_subdir="summaries"):
         # Otherwise, generate and save a new summary.
         try:
             print(f"Generating summary for {p}...")
-            # summary = make_summary(str(p))
-            summary = ""
-            try:
-                summary_file.write_text(summary, encoding="utf-8")
-                results.append(summary_file.read_text(encoding="utf-8"))
-            except Exception as e:
-                print(f"Failed to write summary for {p.name}: {e}", file=sys.stderr)
+            summary_path, summary_text = make_summary(str(p), summary_file)
+            summary_audio_paths.append(summary_path)
         except Exception as e:
             print(f"Failed to summarize {p.name}: {e}", file=sys.stderr)
 
-    return results
+    return summary_audio_paths 
 
 
 def build_episode(args):
@@ -104,42 +105,8 @@ def build_episode(args):
 
     Path("texts").mkdir(parents=True, exist_ok=True)
 
-    if args.debug:
-        summaries = [
-            [
-                "Our Father who art in heaven.",
-                "Hallowed be thy name.",
-                "Thy kingdom come, thy will be done.",
-                "On earth as it is in heaven.",
-                "On earth as it is in heaven.",
-                "Give us this day our daily bread.",
-                "And forgive us our trespasses, as we forgive those who trespass against us."
-                "And lead us not into temptation; but deliver us from evil.",
-                "Amen.",
-            ]
-        ]
-    else:
-        summaries = get_summaries(date=query_date)
-    all_text = ""
-    fg_paths = []
-    with tempfile.TemporaryDirectory() as tmpdir:
-        for i, summary in enumerate(summaries):
-            summary_paths = []
-            summary = split_summary(summary)
-            for i in range(0, len(summary), chunk_size):
-                text = " ".join(summary[i : i + chunk_size])
-                all_text += text + "\n"
-                print("Making audio for {i+1} of {len(summaries)}")
-                print(text)
-                audio_path = get_audio(text, recompute=True, save_dir=tmpdir)
-                summary_paths.append(audio_path)
-            all_text += "\n" + "_" * 12 + "\n\n"
-            fg_paths.append(summary_paths)
-        print("Building track")
-        if args.debug:
-            build_track(fg_paths, f"debug.mp3", overwrite=True)
-        else:
-            build_track(fg_paths, f"episodes/{query_date}.mp3", overwrite=True)
+    audio_paths = get_summaries(date=query_date)
+    build_track(audio_paths, f"episodes/{query_date}.mp3", overwrite=True)
 
     with open(f"texts/{query_date}.txt", "w") as txt:
         metadata_csv = pd.read_csv(f"database/{query_date}/metadata.csv")

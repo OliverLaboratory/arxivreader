@@ -7,14 +7,19 @@ the papers whose TITLES match a list of keywords. Writes JSONL/CSV metadata.
 Skips PDFs that already exist in the output folder and avoids duplicates
 across categories during the same run.
 
+Keyword matching uses whole-word/phrase boundaries:
+  - 'rna' matches "RNA sequencing", but NOT "alteRNAtive"
+  - 'cryo-EM' matches the hyphenated phrase as-is
+  - matching is case-insensitive
+
 Designed to be imported and called from another script.
 
 Example (from another script):
-    from arxiv_titles import main
-    result = main(
+    from arxiv_titles import get_papers  # or import main (alias)
+    result = get_papers(
         date="2025-10-24",
         cats=["cs.LG", "q-bio.BM"],
-        keywords=["protein", "biology"],
+        keywords=["protein", "rna", "cryo-EM"],
         keyword_mode="any",
         out="./arxiv_TITLES_2025-10-24"
     )
@@ -28,7 +33,7 @@ import sys
 import time
 from datetime import datetime, date as _date
 from zoneinfo import ZoneInfo
-from typing import Optional, List, Dict, Set, Tuple, Any, Iterable
+from typing import Optional, List, Dict, Set, Tuple, Any, Iterable, Pattern
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -67,7 +72,22 @@ def _normalize_list(arg: Iterable[str] | str) -> List[str]:
     return [t for chunk in raw.split(",") for t in chunk.split() if t]
 
 def _keywords_list(arg: Iterable[str] | str) -> List[str]:
-    return [k.lower() for k in _normalize_list(arg)]
+    return [k.strip() for k in _normalize_list(arg)]
+
+def _compile_keyword_patterns(keywords: List[str]) -> List[Pattern]:
+    """
+    Compile case-insensitive regex patterns that only match a keyword as a whole word/phrase.
+    Uses custom "token" boundaries so 'rna' won't match inside 'alteRNAtive'.
+
+    We anchor with (?<![A-Za-z0-9]) ... (?![A-Za-z0-9]) around the escaped keyword.
+    """
+    pats: List[Pattern] = []
+    for kw in keywords:
+        if not kw:
+            continue
+        escaped = re.escape(kw)
+        pats.append(re.compile(rf"(?<![A-Za-z0-9]){escaped}(?![A-Za-z0-9])", re.IGNORECASE))
+    return pats
 
 def _target_date(d: _date | str) -> _date:
     if isinstance(d, _date):
@@ -133,12 +153,6 @@ def _extract_title_from_dd(dd_tag: Tag) -> str:
 def _extract_subjects_text(dd_tag: Tag) -> str:
     subj_div = dd_tag.find("div", class_="list-subjects")
     return subj_div.get_text(" ", strip=True) if subj_div else ""
-
-def _title_matches(title: str, keywords: List[str], mode: str = "any") -> bool:
-    t = title.lower()
-    if mode == "all":
-        return all(k in t for k in keywords)
-    return any(k in t for k in keywords)
 
 
 # ------------------------- metadata & download -------------------------
@@ -256,7 +270,7 @@ def _process_category(
     category: str,
     tdate: _date,
     out_dir: str,
-    keywords: List[str],
+    kw_patterns: List[Pattern],
     keyword_mode: str,
     seen_ids: Set[str],
     sleep: float = 0.0,
@@ -281,6 +295,13 @@ def _process_category(
             print(f"[{label}] Available dates on page: " + ", ".join(available))
         return [], {"scanned": 0, "matched": 0, "skipped_existing": 0, "skipped_duplicate": 0}
 
+    def _title_matches_patterns(title: str) -> bool:
+        if not kw_patterns:
+            return True
+        if keyword_mode == "all":
+            return all(p.search(title) for p in kw_patterns)
+        return any(p.search(title) for p in kw_patterns)
+
     rows: List[Dict[str, Any]] = []
     scanned = 0
     matched = 0
@@ -290,7 +311,7 @@ def _process_category(
     for dt_tag, dd_tag in _iter_entries_between(h3):
         scanned += 1
         title = _extract_title_from_dd(dd_tag)
-        if not title or not _title_matches(title, keywords, keyword_mode):
+        if not title or not _title_matches_patterns(title):
             continue
 
         abs_id = _extract_abs_id_from_dt(dt_tag)
@@ -372,7 +393,7 @@ def get_papers(
     Args:
         date: target date (YYYY-MM-DD string or datetime.date), America/New_York.
         cats: iterable or string of arXiv categories, e.g. ["cs.LG", "q-bio.BM"] or "cs.LG,q-bio.BM".
-        keywords: iterable or string of title keywords; case-insensitive.
+        keywords: iterable or string of title keywords; whole-word/phrase, case-insensitive.
         out: output folder; default: ./arxiv_TITLES_<YYYY-MM-DD>.
         keyword_mode: "any" (default) or "all".
         sleep: seconds between downloads (politeness).
@@ -396,6 +417,9 @@ def get_papers(
     if not kw_list:
         raise ValueError("--keywords produced an empty list")
 
+    # Compile once so boundaries are enforced consistently across categories.
+    kw_patterns = _compile_keyword_patterns(kw_list)
+
     out_dir = out or f"arxiv_TITLES_{tdate.isoformat()}"
     os.makedirs(out_dir, exist_ok=True)
     print(f"Categories: {cats_list}")
@@ -415,7 +439,7 @@ def get_papers(
             category=cat,
             tdate=tdate,
             out_dir=out_dir,
-            keywords=kw_list,
+            kw_patterns=kw_patterns,
             keyword_mode=keyword_mode,
             seen_ids=seen_ids,
             sleep=sleep,
@@ -436,4 +460,9 @@ def get_papers(
     return {"out_dir": out_dir, "rows": all_rows, "per_category": per_cat_stats}
 
 
-__all__ = ["main"]
+# Backward-compatible alias (some code imports `main`)
+def main(**kwargs):
+    return get_papers(**kwargs)
+
+
+__all__ = ["get_papers", "main"]

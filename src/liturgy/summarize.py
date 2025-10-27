@@ -12,7 +12,7 @@ def make_summary(
     text_model: str = "gpt-4.1",          # step 1: text summary
     tts_model: str = "gpt-4o-mini-tts",   # step 2: text-to-speech
     voice: str = "alloy",
-    audio_format: str = "wav",            # one of: mp3, opus, aac, flac, wav, pcm
+    audio_format: str = "mp3",            # one of: mp3, opus, aac, flac, wav, pcm
 ) -> Tuple[Path, str]:
     """
     Two-step pipeline:
