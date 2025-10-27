@@ -92,31 +92,34 @@ def update_feed():
     fg.podcast.itunes_explicit("no")
     fg.podcast.itunes_owner("Carlos Oliver", "carlos.oliver@vanderbilt.edu")
     fg.podcast.itunes_author("Carlos Oliver")
-    fg.podcast.itunes_image("https://liturgy.nyc3.digitaloceanspaces.com/liturgy/cover.png")
+    fg.podcast.itunes_image("https://mlcb.nyc3.digitaloceanspaces.com/mlcb/mlcb.jpg")
 
     # Optional: Add podcast image (Spotify supports square images)
     fg.image(
-        f"https://liturgy.nyc3.digitaloceanspaces.com/liturgy/cover.png",
+        f"https://mlcb.nyc3.digitaloceanspaces.com/mlcb/mlcb.jpg",
         title="Podcast Image",
-        link="https://liturgy.nyc3.digitaloceanspaces.com/liturgy/cover.png",
+        link="https://mlcb.nyc3.digitaloceanspaces.com/mlcb/mlcb.jpg",
     )
 
     # Add episodes to the podcast
     episodes = []
     for episode in os.listdir("episodes"):
         print(episode)
+        if str(Path(episode).suffix) != ".mp3": 
+            print(f"skipped {episode}")
+            continue
         upload_episode(os.path.join("episodes", episode))
         ep_str = Path(episode).stem
         date = ep_str.split(".")[0]
         yyyy, mm, dd = date.split("-")
         try:
-            prayer_text = "".join(open(f"texts/{dd}{mm}{yyyy}.txt", "r").readlines())
+            prayer_text = "".join(open(f"texts/{yyyy}-{mm}-{dd}.txt", "r").readlines())
         except FileNotFoundError:
             prayer_text = ""
         episodes.append(
             {
                 "title": f"{dd}.{mm}.{yyyy}",
-                # 'link': f"{BUCKET_BASE_URL}/{episode}",
+                'link': f"{BUCKET_BASE_URL}/{episode}",
                 "description": f"{prayer_text} \n\n {msg}",
                 "pub_date": convert_date(f"{dd}.{mm}.{yyyy}"),
                 "audio_url": f"{BUCKET_BASE_URL}/{episode}",
@@ -128,9 +131,10 @@ def update_feed():
 
     # Loop over each episode and add it to the feed
     for episode in episodes:
+        print(episode)
         fe = fg.add_entry()
         fe.title(episode["title"])
-        fe.author(name="Carlos Oliver", email="c.gqq9t@passmail.net")
+        fe.author(name="Carlos Oliver", email="carlos.oliver@vanderbilt.edu")
         # fe.link(href=episode['link'])
         fe.description(episode["description"])
         fe.pubDate(episode["pub_date"])

@@ -22,7 +22,7 @@ def slow_down_audio(audio_segment, speed_factor):
 
 def stitch_audio_segments_with_silence(segments, silence_duration=3000):
     combined = AudioSegment.empty()
-    silence = AudioSegment.silent(duration=3000)  # 3000 ms = 3 seconds of silence
+    silence = AudioSegment.silent(duration=300)  # 3000 ms = 3 seconds of silence
     for i, audio in enumerate(segments):
         combined += audio
         # Add silence between tracks except after the last track
@@ -38,7 +38,8 @@ def _ms_to_hms(ms: int) -> str:
     h, m = divmod(m, 60)
     return f"{h:d}:{m:02d}:{s:02d}" if h else f"{m:d}:{s:02d}"
 
-def stitch_mp3_files_with_silence(mp3_files, silence_duration=3000, add_leading_silence=True):
+def stitch_mp3_files_with_silence(mp3_files, silence_duration=3000,
+                                  add_leading_silence=False):
     """
     Combine multiple MP3 files into one, with silence between them, and
     return the start timestamp of each clip within the combined audio.
@@ -126,7 +127,7 @@ def build_track(mp3_files, output_path, overwrite=False):
     # Stitch the MP3 files with silence
     print("Stitching MP3 files with silence...")
     final_audio, timestamps = stitch_mp3_files_with_silence(mp3_files,
-                                                    silence_duration=30000)
+                                                    silence_duration=3000)
 
 
     # Save the final audio
