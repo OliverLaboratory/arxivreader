@@ -46,12 +46,14 @@ def get_summaries(date, topic="q-bio.BM", summaries_subdir="summaries"):
                 "dna", 
                 "rna", 
                 "cryo-EM",
+                "Protein-Protein",
                 "Protein-Nucleic",
                 "Protein-Small",
                 "RNA-small",
                 "Molecule",
                 "Molecular",
-                "atomic"]
+                "atomic",
+                "atom"]
     get_papers(date=date, 
                cats=lists,
                keywords=keywords,
@@ -106,13 +108,27 @@ def build_episode(args):
 
     audio_paths = get_summaries(date=query_date)
     print(audio_paths)
-    build_track(audio_paths, f"episodes/{query_date}.mp3", overwrite=True)
+    audio_path, timestamps = build_track(audio_paths, f"episodes/{query_date}.mp3", overwrite=True)
 
     with open(f"texts/{query_date}.txt", "w") as txt:
-        metadata_csv = pd.read_csv(f"database/{query_date}/metadata.csv")
-        text = []
-        for row in metadata_csv.itertuples():
-            text.append(f"{row.title} {row.pdf_url}")
+        metadata = pd.read_csv(f"database/{query_date}/metadata.csv", dtype={"arxiv_id":"string"})
+        print(metadata)
+        text = ["This podcast is brought to you by the Oliver Laboratory"\
+                " at Vanderbilt University.",\
+                "-"*40]
+        for audio_path, time in zip(audio_paths, timestamps):
+            audio_id = str(Path(audio_path).stem.split("-")[1])
+            print(audio_id)
+            paper_data = metadata.loc[metadata['arxiv_id'] ==
+                                      str(audio_id)].reset_index()
+            print(paper_data)
+            text.append(f"{time} {paper_data['title'].iloc[0]}"\
+                        f" ({paper_data['pdf_url'].iloc[0]})")
+        text.append("-"*40)
+        text.append("Source code: "\
+                    "https://github.com/OliverLaboratory/arxivreader")
+        text.append("Contact: "\
+                    "oliverlaboratory.com")
         txt.write("\n".join(text))
 
 

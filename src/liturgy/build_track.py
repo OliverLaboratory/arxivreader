@@ -31,25 +31,50 @@ def stitch_audio_segments_with_silence(segments, silence_duration=3000):
     return combined
 
 
-def stitch_mp3_files_with_silence(mp3_files, silence_duration=3000):
-    """
-    Combine multiple MP3 files into one, with silence between them.
+def _ms_to_hms(ms: int) -> str:
+    """Format milliseconds as H:MM:SS.mmm (hours omitted if 0)."""
+    s, ms_part = divmod(int(ms), 1000)
+    m, s = divmod(s, 60)
+    h, m = divmod(m, 60)
+    return f"{h:d}:{m:02d}:{s:02d}.{ms_part:03d}" if h else f"{m:d}:{s:02d}.{ms_part:03d}"
 
-    :param mp3_files: List of MP3 file paths
-    :param silence_duration: Duration of silence in milliseconds between MP3s
-    :return: Combined AudioSegment with silence between tracks
+def stitch_mp3_files_with_silence(mp3_files, silence_duration=3000, add_leading_silence=True):
     """
-    combined = AudioSegment.empty()
-    silence = AudioSegment.silent(duration=3000)  # 3000 ms = 3 seconds of silence
-    combined += silence
+    Combine multiple MP3 files into one, with silence between them, and
+    return the start timestamp of each clip within the combined audio.
+
+    :param mp3_files: List[str] of MP3 file paths
+    :param silence_duration: Duration of silence (ms) between clips.
+                             Also used as an optional leading pad before the first clip.
+    :param add_leading_silence: If True, prepend `silence_duration` ms before the first clip.
+    :return: (combined: AudioSegment,
+              timestamps_ms: List[int],   # start times (ms) of each clip
+              timestamps_str: List[str])  # human-readable H:MM:SS.mmm
+    """
+    # Start with optional leading silence
+    combined = (AudioSegment.silent(duration=silence_duration)
+                if add_leading_silence else AudioSegment.empty())
+
+    timestamps_ms = []
+    cursor = len(combined)  # where the next clip will start (in ms)
+
     for i, mp3_file in enumerate(mp3_files):
         audio = AudioSegment.from_mp3(mp3_file)
-        #audio = slow_down_audio(audio, 0.70)
+
+        # Record the start time for this clip (relative to the final stitched audio)
+        timestamps_ms.append(cursor)
+
+        # Append the audio
         combined += audio
-        # Add silence between tracks except after the last track
+        cursor = len(combined)
+
+        # Add inter-clip silence except after the last track
         if i < len(mp3_files) - 1:
-            combined += silence
-    return combined
+            combined += AudioSegment.silent(duration=silence_duration)
+            cursor = len(combined)
+
+    timestamps_str = [_ms_to_hms(ms) for ms in timestamps_ms]
+    return combined, timestamps_str
 
 
 def add_background_music(main_audio, background_audio_path, foreground_volume=0, background_volume=-20):
@@ -97,17 +122,16 @@ def save_mp3(audio_segment, output_path):
 
 
 def build_track(mp3_files, output_path, overwrite=False):
-    if not os.path.exists(output_path) or overwrite:
 
-        # Stitch the MP3 files with silence
-        print("Stitching MP3 files with silence...")
-        final_audio = stitch_mp3_files_with_silence(mp3_files,
+    # Stitch the MP3 files with silence
+    print("Stitching MP3 files with silence...")
+    final_audio, timestamps = stitch_mp3_files_with_silence(mp3_files,
                                                     silence_duration=30000)
 
 
-        # Save the final audio
-        print(f"Saving output to {output_path}...")
-        save_mp3(final_audio, output_path)
-        print("Done!")
-    else:
-        print(f"{output_path} already exists. Skipping.")
+    # Save the final audio
+    print(f"Saving output to {output_path}...")
+    save_mp3(final_audio, output_path)
+    print("Done!")
+    return output_path, timestamps
+
