@@ -16,6 +16,10 @@ from liturgy.build_track import build_track
 
 chunk_size = 2
 
+with open("OPENAI.txt", "r") as oai:
+    key = oai.readline()
+
+os.environ["OPENAI_API_KEY"] = key
 
 def cline():
     parser = argparse.ArgumentParser()
