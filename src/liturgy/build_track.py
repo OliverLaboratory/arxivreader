@@ -36,7 +36,7 @@ def _ms_to_hms(ms: int) -> str:
     s, ms_part = divmod(int(ms), 1000)
     m, s = divmod(s, 60)
     h, m = divmod(m, 60)
-    return f"{h:d}:{m:02d}:{s:02d}.{ms_part:03d}" if h else f"{m:d}:{s:02d}.{ms_part:03d}"
+    return f"{h:d}:{m:02d}:{s:02d}" if h else f"{m:d}:{s:02d}"
 
 def stitch_mp3_files_with_silence(mp3_files, silence_duration=3000, add_leading_silence=True):
     """
