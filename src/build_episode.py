@@ -17,7 +17,7 @@ from liturgy.build_track import build_track
 chunk_size = 2
 
 with open("OPENAI.txt", "r") as oai:
-    key = oai.readline()
+    key = oai.readline().strip()
 
 os.environ["OPENAI_API_KEY"] = key
 
