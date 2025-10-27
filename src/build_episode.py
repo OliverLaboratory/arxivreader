@@ -41,13 +41,15 @@ def get_summaries(date, topic="q-bio.BM", summaries_subdir="summaries"):
     outdir = Path(f"database/{date}")
 
     print("Fetching papers")
-    tags = {"cs.LG", "cs.AI", "q-bio.BM", "cs.CL", "q-bio.QM"}
-    keywords = ["protein", "dna", "rna"]
-    get_papers(date, 
-               tags,
-               str(outdir),
-               include_cs_lg=True, 
-               cs_keywords=keywords,
+    lists = ["cs.LG", "cs.AI", "q-bio.BM", "cs.CL", "q-bio.QM"]
+    keywords = ["protein", 
+                "dna", 
+                "rna", 
+                "cryo-EM"]
+    get_papers(date=date, 
+               cats=lists,
+               keywords=keywords,
+               out=str(outdir)
                )
 
     print("Summarizing ...")
@@ -80,7 +82,8 @@ def get_summaries(date, topic="q-bio.BM", summaries_subdir="summaries"):
         # Otherwise, generate and save a new summary.
         try:
             print(f"Generating summary for {p}...")
-            summary = make_summary(str(p))
+            # summary = make_summary(str(p))
+            summary = ""
             try:
                 summary_file.write_text(summary, encoding="utf-8")
                 results.append(summary_file.read_text(encoding="utf-8"))
