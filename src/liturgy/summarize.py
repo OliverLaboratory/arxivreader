@@ -33,9 +33,9 @@ def make_summary(
 
     # --- Step 1: ask for a 700-word expert monologue summary (plain text only) ---
     prompt = (
-        "summarize this pdf for a person who knows the field in about 700 words. "
+        "summarize this pdf for a person who knows the field in about 500 words. "
         "don't give me any formatting or headers. just the text written as paragraphs, "
-        "no bullet points. write as though it were a monologue being spoken by a person. "
+        "no bullet points. write as though it were a short spoken presentation about the paper. "
         "at the start state the title and the authors. no special characters."
     )
 

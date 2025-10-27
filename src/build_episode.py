@@ -58,7 +58,6 @@ def get_summaries(date, topic="q-bio.BM", summaries_subdir="summaries"):
                out=str(outdir)
                )
 
-    sys.exit()
     print("Summarizing ...")
     # Choose/create summaries directory: prefer <outdir>/summaries; fall back to ./summaries if it already exists.
     summaries_dir = outdir / summaries_subdir
@@ -106,6 +105,7 @@ def build_episode(args):
     Path("texts").mkdir(parents=True, exist_ok=True)
 
     audio_paths = get_summaries(date=query_date)
+    print(audio_paths)
     build_track(audio_paths, f"episodes/{query_date}.mp3", overwrite=True)
 
     with open(f"texts/{query_date}.txt", "w") as txt:

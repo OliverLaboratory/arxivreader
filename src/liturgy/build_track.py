@@ -96,22 +96,14 @@ def save_mp3(audio_segment, output_path):
     audio_segment.export(output_path, format="mp3")
 
 
-def build_track(fg_files, output_path, overwrite=False):
+def build_track(mp3_files, output_path, overwrite=False):
     if not os.path.exists(output_path) or overwrite:
-        # List of MP3 files to stitch together
-        mp3_files = fg_files  # Replace with your file paths
-
-        # Silence duration between tracks (in milliseconds)
-        silence_duration = 3000  # 3 seconds
 
         # Stitch the MP3 files with silence
         print("Stitching MP3 files with silence...")
-        summaries = []
-        for summary in fg_files:
-            combined_audio = stitch_mp3_files_with_silence(summary, 0)
-            summaries.append(combined_audio)
+        final_audio = stitch_mp3_files_with_silence(mp3_files,
+                                                    silence_duration=30000)
 
-        final_audio = stitch_audio_segments_with_silence(summaries)
 
         # Save the final audio
         print(f"Saving output to {output_path}...")
