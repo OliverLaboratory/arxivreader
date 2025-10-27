@@ -5,3 +5,6 @@ feedgen
 numpy
 scipy
 torch
+pydub
+bark
+pandas
