@@ -11,7 +11,6 @@ import pandas as pd
 from liturgy.get_liturgy import fetch_liturgy
 from liturgy.arxiv import get_papers 
 from liturgy.summarize import make_summary
-from liturgy.tts import get_audio
 from liturgy.build_track import build_track
 
 chunk_size = 2
