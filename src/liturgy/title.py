@@ -24,9 +24,7 @@ def generate_episode_title(paper_titles: List[str], *, model: str = "gpt-4.1", m
     list_block = "\n".join(f"- {t}" for t in paper_titles)
 
     prompt = (
-        f"Create ONE concise, descriptive podcast episode title (<= {max_words} words) "
-        "that captures the shared themes across the following paper titles. "
-        "Do NOT list the paper titles themselves. Avoid quotes, colons, long dashes, and emojis. "
+        "Generate a comma separated list of maximum two descriptive key words for each of the papers"
         "Use Title Case. Return only the title text on a single line.\n\n"
         f"Paper titles:\n{list_block}"
     )
