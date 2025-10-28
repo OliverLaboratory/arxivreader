@@ -2,7 +2,6 @@ from __future__ import annotations
 from typing import List
 from openai import OpenAI
 
-client = OpenAI()
 
 def generate_episode_title(paper_titles: List[str], *, model: str = "gpt-4.1", max_words: int = 12) -> str:
     """
@@ -18,6 +17,7 @@ def generate_episode_title(paper_titles: List[str], *, model: str = "gpt-4.1", m
         ]
         print(generate_episode_title(titles))
     """
+    client = OpenAI()
     if not paper_titles:
         raise ValueError("paper_titles must not be empty")
 
