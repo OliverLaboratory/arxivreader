@@ -10,6 +10,7 @@ import pandas as pd
 
 from liturgy.get_liturgy import fetch_liturgy
 from liturgy.arxiv import get_papers 
+from liturgy.title import generate_episode_title
 from liturgy.summarize import make_summary
 from liturgy.build_track import build_track
 
@@ -133,6 +134,11 @@ def build_episode(args):
         text.append("Contact: "\
                     "oliverlaboratory.com")
         txt.write("\n".join(text))
+
+    with open(f"titles/{query_date}.txt", "w") as txt:
+        titles = list(metadata["title"])
+        title = generate_episode_title(titles)
+        txt.write(f"{query_date} {title}")
 
 
 if __name__ == "__main__":

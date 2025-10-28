@@ -116,9 +116,11 @@ def update_feed():
             prayer_text = "".join(open(f"texts/{yyyy}-{mm}-{dd}.txt", "r").readlines())
         except FileNotFoundError:
             prayer_text = ""
+        with open(f"titles/{yyyy}-{mm}-{dd}.txt", 'r') as tit:
+            title = tit.readline().strip()
         episodes.append(
             {
-                "title": f"{dd}.{mm}.{yyyy}",
+                "title": f"{dd}.{mm}.{yyyy}: {title}",
                 'link': f"{BUCKET_BASE_URL}/{episode}",
                 "description": f"{prayer_text} \n\n {msg}",
                 "pub_date": convert_date(f"{dd}.{mm}.{yyyy}"),
