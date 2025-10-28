@@ -138,7 +138,7 @@ def build_episode(args):
     with open(f"titles/{query_date}.txt", "w") as txt:
         titles = list(metadata["title"])
         title = generate_episode_title(titles)
-        txt.write(f"{query_date} {title}")
+        txt.write(f"{title}")
 
 
 if __name__ == "__main__":
