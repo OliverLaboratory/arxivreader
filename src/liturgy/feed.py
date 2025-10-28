@@ -1,172 +1,191 @@
-import boto3
-from pathlib import Path
-from feedgen.feed import FeedGenerator
-import os
-from pydub.utils import mediainfo
-import wave
-from datetime import timedelta
-from datetime import datetime
+#!/usr/bin/env python3
+"""
+Generate and upload an Apple Podcasts–compliant RSS feed to DigitalOcean Spaces.
 
-# DigitalOcean Spaces credentials
+Fixes included vs. your last version:
+- No `feedgen.ext.atom` import (avoids ModuleNotFoundError).
+- Adds <atom:link rel="self"> manually via ElementTree (optional but nice).
+- Correct Spaces endpoint vs. public URL; consistent key prefix (mlcb/…).
+- Stable GUID (the enclosure URL), RFC-2822 pubDate, itunes:duration, episodic type.
+- Correct MIME types on upload.
+
+Requires:
+  pip install boto3 feedgen pydub
+  # and system ffmpeg/ffprobe for pydub.mediainfo (apt-get install -y ffmpeg)
+
+Environment/files:
+  SPACES_ACCESS.txt  -> first line is Spaces access key
+  SPACES_SECRET.txt  -> first line is Spaces secret
+  episodes/YYYY-MM-DD.mp3
+  titles/YYYY-MM-DD.txt           (optional, first line used as title suffix)
+  texts/YYYY-MM-DD.txt            (optional, appended to description)
+  mlcb.jpg                        (square 1400–3000px RGB)
+"""
+
+import os
+from pathlib import Path
+from datetime import datetime, timezone
+import boto3
+from feedgen.feed import FeedGenerator
+from pydub.utils import mediainfo
+from xml.etree import ElementTree as ET
+
+# ---------- DigitalOcean Spaces config ----------
 SPACE_NAME = "mlcb"
 REGION = "nyc3"
-ENDPOINT_URL = f"https://{SPACE_NAME}.{REGION}.digitaloceanspaces.com"
-ACCESS_KEY = open("SPACES_ACCESS.txt").readline().strip()
-SECRET_KEY = open("SPACES_SECRET.txt").readline().strip()
 
-# Podcast details
-FEED_URL = f"https://{SPACE_NAME}.{REGION}.digitaloceanspaces.com/mlcb/mlcb.xml"
-LOCAL_FEED_FILE = "mlcb.xml"
-BUCKET_BASE_URL = f"https://{SPACE_NAME}.{REGION}.digitaloceanspaces.com/mlcb"
+# S3 API endpoint (boto3) and public base URL for objects
+SPACE_ENDPOINT = f"https://{REGION}.digitaloceanspaces.com"
+PUBLIC_BASE = f"https://{SPACE_NAME}.{REGION}.digitaloceanspaces.com"
 
-# Initialize Spaces client
+# Objects live under this prefix/folder inside the Space
+KEY_PREFIX = "mlcb"
+
+# Final public feed URL (what you submit to directories)
+FEED_URL = f"{PUBLIC_BASE}/{KEY_PREFIX}/mlcb.xml"
+
+# Credentials from local files
+ACCESS_KEY = Path("SPACES_ACCESS.txt").read_text().splitlines()[0].strip()
+SECRET_KEY = Path("SPACES_SECRET.txt").read_text().splitlines()[0].strip()
+
+# Boto3 client
 session = boto3.session.Session()
 client = session.client(
     "s3",
     region_name=REGION,
-    endpoint_url=ENDPOINT_URL,
+    endpoint_url=SPACE_ENDPOINT,
     aws_access_key_id=ACCESS_KEY,
     aws_secret_access_key=SECRET_KEY,
 )
 
+# ---------- Helpers ----------
 
-def get_mp3_duration(file_path):
-    # Get media info
-    info = mediainfo(file_path)
-
-    # Duration in seconds
+def get_mp3_duration_hhmmss(file_path: str) -> str:
+    """Return HH:MM:SS duration using ffprobe via pydub.mediainfo."""
+    info = mediainfo(file_path)  # needs ffprobe in PATH
     duration_seconds = float(info["duration"])
+    h = int(duration_seconds // 3600)
+    m = int((duration_seconds % 3600) // 60)
+    s = int(duration_seconds % 60)
+    return f"{h:02d}:{m:02d}:{s:02d}"
 
-    # Convert to hh:mm:ss format
-    hours = int(duration_seconds // 3600)
-    minutes = int((duration_seconds % 3600) // 60)
-    seconds = int(duration_seconds % 60)
+def upload_public(key: str, local_path: str, content_type: str) -> str:
+    """Upload file to Spaces with public-read ACL and return public URL."""
+    client.upload_file(
+        local_path,
+        SPACE_NAME,
+        key,
+        ExtraArgs={"ContentType": content_type, "ACL": "public-read"},
+    )
+    return f"{PUBLIC_BASE}/{key}"
 
-    return f"{hours:02}:{minutes:02}:{seconds:02}"
+def upload_episode(local_path: str) -> str:
+    """Upload episode to mlcb/episodes/<filename> and return public URL."""
+    file_name = os.path.basename(local_path)
+    key = f"{KEY_PREFIX}/episodes/{file_name}"
+    return upload_public(key, local_path, "audio/mpeg")
 
+def pubdate_from_filename(date_str: str) -> datetime:
+    """YYYY-MM-DD -> datetime at 00:00:00 UTC (Apple wants RFC-2822; feedgen formats it)."""
+    dt = datetime.strptime(date_str, "%Y-%m-%d")
+    return dt.replace(tzinfo=timezone.utc)
 
-def get_wav_duration_hms(file_path):
-    with wave.open(file_path, "r") as wav_file:
-        frames = wav_file.getnframes()
-        rate = wav_file.getframerate()
-        duration_seconds = int(frames / float(rate))
-        duration_hms = str(timedelta(seconds=duration_seconds))
-        return duration_hms
-
-
-def upload_episode(file_path):
-    """Upload an episode to DigitalOcean Space."""
-    file_name = os.path.basename(file_path)
-    client.upload_file(file_path, SPACE_NAME, file_name, ExtraArgs={"ContentType": "audio/mpeg", "ACL": "public-read"})
-    return f"{BUCKET_BASE_URL}/{file_name}"
-
-
-def convert_date(date_str):
-    # Parse the date in MM.DD.YYYY format
-    date_obj = datetime.strptime(date_str, "%d.%m.%Y")
-    # Format it into Mon, 01 Jan 2024 00:00:00 GMT
-    return date_obj.strftime("%a, %d %b %Y 00:00:00 GMT")
-
+# ---------- Feed generation ----------
 
 def update_feed():
-    """Update the podcast feed with a new episode."""
-
-    # Initialize the feed generator
     fg = FeedGenerator()
-    fg.load_extension("podcast")
+    fg.load_extension("podcast")  # adds itunes namespace
+
+    # Channel metadata (meets Apple requirements)
     fg.id(FEED_URL)
     fg.title("Machine Learning in Computational Biology: Daily Digest")
-    fg.link(href=FEED_URL, rel="self")
-    fg.description(
-        "Daily summaries of preprints in machine learning and computational"\
-        "biology. \n Source code: "\
-        "https://github.com/OliverLaboratory/arxivreader"
-    )
+    fg.link(href=FEED_URL, rel="self")  # RSS self-link
+    fg.link(href=f"{PUBLIC_BASE}/{KEY_PREFIX}", rel="alternate")
     fg.language("en")
+    fg.description(
+        "Daily summaries of preprints in machine learning and computational biology.\n"
+        "Source code: https://github.com/OliverLaboratory/arxivreader"
+    )
 
-    msg = "Source code: https://github.com/OliverLaboratory/arxivreader"
-
-    # Include the email in the author field
-    fg.author({"name": "Carlos Oliver", "email": "carlos.oliver@vanderbilt.edu"})  # Add your name and email
+    # Apple Podcasts tags
+    fg.podcast.itunes_author("Carlos Oliver")
+    fg.author({"name": "Carlos Oliver", "email": "carlos.oliver@vanderbilt.edu"})
+    fg.podcast.itunes_owner("Carlos Oliver", "carlos.oliver@vanderbilt.edu")
     fg.podcast.itunes_category("Science", "Life Sciences")
     fg.podcast.itunes_explicit("no")
-    fg.podcast.itunes_owner("Carlos Oliver", "carlos.oliver@vanderbilt.edu")
-    fg.podcast.itunes_author("Carlos Oliver")
-    fg.podcast.itunes_image("https://mlcb.nyc3.digitaloceanspaces.com/mlcb/mlcb.jpg")
+    fg.podcast.itunes_type("episodic")
+    fg.podcast.itunes_image(f"{PUBLIC_BASE}/{KEY_PREFIX}/mlcb.jpg")
 
-    # Optional: Add podcast image (Spotify supports square images)
+    # Optional RSS image
     fg.image(
-        f"https://mlcb.nyc3.digitaloceanspaces.com/mlcb/mlcb.jpg",
+        f"{PUBLIC_BASE}/{KEY_PREFIX}/mlcb.jpg",
         title="Podcast Image",
-        link="https://mlcb.nyc3.digitaloceanspaces.com/mlcb/mlcb.jpg",
+        link=f"{PUBLIC_BASE}/{KEY_PREFIX}/mlcb.jpg",
     )
 
-    # Add episodes to the podcast
-    episodes = []
-    for episode in os.listdir("episodes"):
-        print(episode)
-        if str(Path(episode).suffix) != ".mp3": 
-            print(f"skipped {episode}")
-            continue
-        upload_episode(os.path.join("episodes", episode))
-        ep_str = Path(episode).stem
-        date = ep_str.split(".")[0]
-        yyyy, mm, dd = date.split("-")
+    # Collect local episodes
+    episodes_dir = Path("episodes")
+    if not episodes_dir.exists():
+        print("No episodes/ directory found.")
+        return
+
+    notes_msg = "Source code: https://github.com/OliverLaboratory/arxivreader"
+
+    # Sorted so feed is stable (YYYY-MM-DD lexicographic works)
+    for mp3 in sorted(episodes_dir.glob("*.mp3")):
+        date_str = mp3.stem  # YYYY-MM-DD
         try:
-            prayer_text = "".join(open(f"texts/{yyyy}-{mm}-{dd}.txt", "r").readlines())
-        except FileNotFoundError:
-            prayer_text = ""
-        with open(f"titles/{yyyy}-{mm}-{dd}.txt", 'r') as tit:
-            title = tit.readline().strip()
-        episodes.append(
-            {
-                "title": f"{dd}.{mm}.{yyyy}: {title}",
-                'link': f"{BUCKET_BASE_URL}/{episode}",
-                "description": f"{prayer_text} \n\n {msg}",
-                "pub_date": convert_date(f"{dd}.{mm}.{yyyy}"),
-                "audio_url": f"{BUCKET_BASE_URL}/{episode}",
-                "duration": get_mp3_duration(f"episodes/{episode}"),  # Duration in format hh:mm:ss
-                "explicit": "no",  # Mark as explicit or not
-                "path": f"episodes/{episode}",
-            }
+            pub_dt = pubdate_from_filename(date_str)
+        except ValueError:
+            print(f"Skipping {mp3.name}: filename must be YYYY-MM-DD.mp3")
+            continue
+
+        # Upload episode and gather metadata
+        audio_url = upload_episode(str(mp3))
+        size_bytes = os.path.getsize(mp3)
+        duration = get_mp3_duration_hhmmss(str(mp3))
+
+        title_suffix = Path(f"titles/{date_str}.txt").read_text(encoding="utf-8").splitlines()[0].strip() if Path(f"titles/{date_str}.txt").exists() else "Daily Digest"
+        notes = Path(f"texts/{date_str}.txt").read_text(encoding="utf-8") if Path(f"texts/{date_str}.txt").exists() else ""
+
+        ep_title = f"{date_str.split('-')[2]}.{date_str.split('-')[1]}.{date_str.split('-')[0]}: {title_suffix}"
+        description = f"{notes}\n\n{notes_msg}"
+
+        # Add feed entry
+        fe = fg.add_entry()
+        fe.title(ep_title)
+        fe.description(description)
+        fe.pubDate(pub_dt)  # feedgen renders RFC-2822
+        fe.enclosure(audio_url, size_bytes, "audio/mpeg")
+        fe.guid(audio_url, permalink=True)               # stable ID = enclosure URL
+        fe.podcast.itunes_explicit("no")
+        fe.podcast.itunes_episode_type("full")
+        fe.podcast.itunes_duration(duration)             # HH:MM:SS
+
+    # Write RSS to bytes, inject atom:link rel="self", then save/upload
+    rss_bytes = fg.rss_str(pretty=True)
+
+    ATOM_NS = "http://www.w3.org/2005/Atom"
+    ET.register_namespace("atom", ATOM_NS)
+    root = ET.fromstring(rss_bytes)
+    channel = root.find("channel")
+    if channel is not None:
+        # Add atom:link rel="self" (optional but helps validators)
+        ET.SubElement(
+            channel,
+            f"{{{ATOM_NS}}}link",
+            {"href": FEED_URL, "rel": "self", "type": "application/rss+xml"},
         )
 
-    # Loop over each episode and add it to the feed
-    for episode in episodes:
-        print(episode)
-        fe = fg.add_entry()
-        fe.title(episode["title"])
-        fe.author(name="Carlos Oliver", email="carlos.oliver@vanderbilt.edu")
-        # fe.link(href=episode['link'])
-        fe.description(episode["description"])
-        fe.pubDate(episode["pub_date"])
-        fe.enclosure(
-            episode["audio_url"], os.path.getsize(episode["path"]), "audio/mpeg"
-        )  # Enclosure for audio file (MP3)
-        fe.guid(episode["description"], permalink=False)
-        # fe.itunes_duration(episode["duration"])  # Optional: Add iTunes duration tag
-        fe.podcast.itunes_explicit(episode["explicit"])  # Explicit content flag for Spotify
+    local_feed = "mlcb.xml"
+    ET.ElementTree(root).write(local_feed, encoding="utf-8", xml_declaration=True)
 
-    # Generate and save the podcast RSS feed to a file
-    fg.rss_file("mlcb.xml")
-
-    print("Podcast feed for Spotify generated: mlcb.xml")
-
-    fg.rss_file(LOCAL_FEED_FILE)
-    client.upload_file(
-        LOCAL_FEED_FILE,
-        SPACE_NAME,
-        os.path.basename(LOCAL_FEED_FILE),
-        ExtraArgs={"ContentType": "application/rss+xml", "ACL": "public-read"},
-    )
-
+    # Upload feed to mlcb/mlcb.xml
+    upload_public(f"{KEY_PREFIX}/{Path(local_feed).name}", local_feed, "application/rss+xml; charset=utf-8")
+    print(f"Podcast feed generated and uploaded: {FEED_URL}")
 
 def main():
-    # Upload new episode
-    # Update feed
     update_feed()
-    print("Podcast feed updated!")
-
 
 if __name__ == "__main__":
     main()
