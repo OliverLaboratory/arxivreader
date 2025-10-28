@@ -1,17 +1,12 @@
-# Automated Daily Prayer Reading Podcast
+# Automated arXiv podcast generator
 
-Source code for [Liturgy of the Hours podcast](https://open.spotify.com/show/1LHNP0yiopuiHFRjAguaXg?si=9075cdf6007642cd).
-
-<div align="center">
-<a href="https://open.spotify.com/show/1LHNP0yiopuiHFRjAguaXg?si=9075cdf6007642cd"><img src="images/cover.png" width="300"></a>
-</div>
+Source code for [Machine Learning in Computational Biology Daily Digest](https://open.spotify.com/show/1rKazxSnk5ON9DxvhXsRdB)
 
 
 This repository automates a full podcast from episode generation to release: 
 
-1. Fetch daily prayers
-2. Feed to TTS engine for reading.
-3. Set to background music.
+1. Fetch relevant daily arxiv papers 
+2. Feed to OpenAI for summarizing and TTS.
 4. Upload to DigitalOcean Spaces
 5. Update XML feed.
 
@@ -50,5 +45,3 @@ chmod u+x release.sh
 ```
 
 ---
-
-Support development and hosting costs with [donation](https://ko-fi.com/liturgy).
