@@ -118,8 +118,8 @@ def build_episode(args):
         metadata = pd.read_csv(f"database/{query_date}/metadata.csv", dtype={"arxiv_id":"string"})
         print(metadata)
         text = ["This podcast is brought to you by the Oliver Laboratory"\
-                " at Vanderbilt University.",\
-                "-"*40]
+                " at Vanderbilt University.\n",\
+                "-"*40 + "\n"]
         for audio_path, time in zip(audio_paths, timestamps):
             audio_id = str(Path(audio_path).stem.split("-")[1])
             print(audio_id)
@@ -128,9 +128,9 @@ def build_episode(args):
             print(paper_data)
             text.append(f"{time} {paper_data['title'].iloc[0]}"\
                         f" ({paper_data['pdf_url'].iloc[0]})")
-        text.append("-"*40)
+        text.append("-"*40 + "\n")
         text.append("Source code: "\
-                    "https://github.com/OliverLaboratory/arxivreader")
+                    "https://github.com/OliverLaboratory/arxivreader \n")
         text.append("Contact: "\
                     "oliverlaboratory.com")
         txt.write("\n".join(text))
