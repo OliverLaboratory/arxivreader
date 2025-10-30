@@ -24,8 +24,10 @@ def generate_episode_title(paper_titles: List[str], *, model: str = "gpt-4.1", m
     list_block = "\n".join(f"- {t}" for t in paper_titles)
 
     prompt = (
-        "Generate a comma separated list of maximum three descriptive words"
-        "for three of the most interesting papers, end it with 'and more'"
+        "Generate a joint title for all the paper titles listed below."
+        "The title should list 3 of the most interesting aspects of these "
+        "papers. For example: 'Improved protein embeddings, equivariat,"
+        "models, a new RNA benchmark.'"
         "Use Title Case. Return only the title text on a single line.\n\n"
         f"Paper titles:\n{list_block}"
     )
