@@ -62,6 +62,7 @@ client = session.client(
 
 def get_mp3_duration_hhmmss(file_path: str) -> str:
     """Return HH:MM:SS duration using ffprobe via pydub.mediainfo."""
+    print(file_path)
     info = mediainfo(file_path)  # needs ffprobe in PATH
     duration_seconds = float(info["duration"])
     h = int(duration_seconds // 3600)

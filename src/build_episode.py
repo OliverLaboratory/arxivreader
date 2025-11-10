@@ -112,11 +112,17 @@ def build_episode(args):
 
     audio_paths = get_summaries(date=query_date)
     print(audio_paths)
+    if len(audio_paths) < 1:
+        print("No papers for this day")
+        return
     audio_path, timestamps = build_track(audio_paths, f"episodes/{query_date}.mp3", overwrite=True)
 
     with open(f"texts/{query_date}.txt", "w") as txt:
-        metadata = pd.read_csv(f"database/{query_date}/metadata.csv", dtype={"arxiv_id":"string"})
-        print(metadata)
+        try:
+            metadata = pd.read_csv(f"database/{query_date}/metadata.csv", dtype={"arxiv_id":"string"})
+        except FileNotFoundError:
+            print(f"No episode found for {query_date}")
+            return
         text = ["This podcast is brought to you by the Oliver Laboratory"\
                 " at Vanderbilt University.\n",\
                 "-"*40 + "\n"]
